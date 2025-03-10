@@ -1,0 +1,79 @@
+version: "3.8"
+
+services:
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "4000:4000"
+    depends_on:
+      - redis
+      - auth-service
+      - book-service
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - AUTH_SERVICE_URL=http://auth-service:5000
+      - BOOK_SERVICE_URL=http://book-service:5001
+    networks:
+      - iceberg-network
+
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres-users
+      - redis
+    environment:
+      - POSTGRES_URL=postgres://admin:root@postgres-users:5432/users_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=my_secret_key_123
+    networks:
+      - iceberg-network
+
+  book-service:
+    build: ./book-service
+    ports:
+      - "5001:5001"
+    depends_on:
+      - postgres-books
+      - redis
+    environment:
+      - POSTGRES_URL=postgres://user:password@postgres-books:5432/books_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - iceberg-network
+
+  redis:
+    image: redis:alpine
+    ports: []
+    networks:
+      - iceberg-network
+
+  postgres-users:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: users_db
+    ports:
+      - "5433:5432"
+    networks:
+      - iceberg-network
+
+  postgres-books:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: books_db
+    ports:
+      - "5434:5432"
+    networks:
+      - iceberg-network
+
+networks:
+  iceberg-network:
+    driver: bridge
